@@ -1,4 +1,5 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell, Building2, CalendarClock, Car, ChevronDown, ChevronRight, CircleDollarSign,
@@ -8,7 +9,24 @@ import {
 } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "./api";
-import { companyLabel, customers, inr, policies, revenue, vehicles } from "./data";
+import { initializeAuth, setAccessToken } from "./auth";
+import { customers as fixtureCustomers, policies as fixturePolicies, revenue as fixtureRevenue, vehicles as fixtureVehicles } from "../../shared/test-fixtures/insuranceFixtures";
+const useFixtures = import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_DATA === "true";
+const customers = useFixtures ? fixtureCustomers : [];
+const policies = useFixtures ? fixturePolicies : [];
+const revenue = useFixtures ? fixtureRevenue : [];
+const vehicles = useFixtures ? fixtureVehicles : [];
+const companyLabel: Record<string,string> = { STAR_HEALTH:"Star Health",TATA_AIG_HEALTH:"Tata AIG Health",LIC:"LIC",TATA_AIG_VEHICLE:"Tata AIG Vehicle",IFFCO_TOKIO:"IFFCO Tokio" };
+const inr=(n:number)=>new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(n);
+function useApiList<T>(key: string, path: string, fallback: T[]) {
+  const query = useQuery({
+    queryKey: [key],
+    queryFn: async () => (await api.get(path)).data?.data,
+    enabled: !useFixtures,
+  });
+  const rows = useFixtures ? fallback : (Array.isArray(query.data) ? query.data : (query.data?.content ?? []));
+  return { ...query, rows: rows as T[] };
+}
 
 const remoteDashboard = lazy(() => import("dashboard/DashboardPage"));
 const remoteCustomers = lazy(() => import("customers/CustomersApp"));
@@ -29,14 +47,23 @@ const nav: NavItem[] = [
 ];
 
 export default function App() {
-  const [authenticated, setAuthenticated] = useState(() => Boolean(localStorage.getItem("insuredesk-session")));
+  const [authState, setAuthState] = useState<"loading" | "authenticated" | "unauthenticated">("loading");
+  const [user, setUser] = useState<Record<string, unknown> | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  if (!authenticated) return <Login onLogin={() => setAuthenticated(true)} />;
+  useEffect(() => {
+    initializeAuth().then((currentUser) => {
+      setUser(currentUser);
+      setAuthState(currentUser ? "authenticated" : "unauthenticated");
+    });
+  }, []);
+  if (authState === "loading") return <div className="auth-loading"><div className="spinner" /><span>Restoring your secure session…</span></div>;
+  if (authState === "unauthenticated") return <Login onLogin={(currentUser) => { setUser(currentUser); setAuthState("authenticated"); }} />;
   return (
     <div className={`app-frame ${collapsed ? "nav-collapsed" : ""}`}>
-      <Sidebar collapsed={collapsed} mobileOpen={mobileOpen} closeMobile={() => setMobileOpen(false)} onLogout={() => {
-        localStorage.removeItem("insuredesk-session"); localStorage.removeItem("insuredesk-token"); setAuthenticated(false);
+      <Sidebar collapsed={collapsed} mobileOpen={mobileOpen} closeMobile={() => setMobileOpen(false)} onLogout={async () => {
+        await api.post("/auth/logout", undefined, { withCredentials: true }).catch(() => undefined);
+        setAccessToken(null); setUser(null); setAuthState("unauthenticated");
       }} />
       <main className="main">
         <Topbar toggleNav={() => setCollapsed((v) => !v)} openMobile={() => setMobileOpen(true)} />
@@ -64,22 +91,27 @@ function RemoteSwitch({ local, remote: Remote }: { local: React.ReactNode; remot
   return <Suspense fallback={<div className="remote-loading"><div className="spinner" /> Loading workspace module…</div>}><Remote /></Suspense>;
 }
 
-function Login({ onLogin }: { onLogin: () => void }) {
-  const [email, setEmail] = useState("agent@insuredesk.local");
-  const [password, setPassword] = useState("password");
+function Login({ onLogin }: { onLogin: (user: Record<string, unknown>) => void }) {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true); setError("");
     try {
-      const response = await api.post("/auth/login", { email, password });
-      localStorage.setItem("insuredesk-token", response.data.data.accessToken);
+      const response = await api.post("/auth/login", { email, password }, { withCredentials: true });
+      setAccessToken(response.data.data.accessToken);
+      const currentUser = (await api.get("/auth/me", { withCredentials: true })).data.data;
+      onLogin(currentUser);
+      if (currentUser.role === "CUSTOMER") navigate("/portal");
     } catch {
-      if (import.meta.env.VITE_ENABLE_DEMO_DATA !== "true") { setError("Could not sign in. Check your email, password, and API connection."); setLoading(false); return; }
+      setError("Could not sign in. Check your email, password, and API connection.");
+      setLoading(false);
+      return;
     }
-    localStorage.setItem("insuredesk-session", "dealer"); setLoading(false); onLogin();
+    setLoading(false);
   };
-  const demo = () => { localStorage.setItem("insuredesk-session", "demo"); onLogin(); };
   return (
     <div className="login-page">
       <div className="login-brand">
@@ -106,7 +138,6 @@ function Login({ onLogin }: { onLogin: () => void }) {
             <div className="form-meta"><label className="check"><input type="checkbox" defaultChecked /> Keep me signed in</label><a href="#forgot">Forgot password?</a></div>
             <button className="button primary full" disabled={loading}>{loading ? "Signing in…" : "Sign in securely"} <ChevronRight size={17} /></button>
           </form>
-          <button className="demo-link" onClick={demo}>Explore with demo data</button>
           <p className="security-note"><ShieldCheck size={14} /> Protected with encrypted, role-based access</p>
         </div>
       </section>
@@ -152,15 +183,19 @@ function PageHeader({ eyebrow, title, description, action }: { eyebrow: string; 
 
 function Dashboard() {
   const chartColors = ["#146b59", "#d5a33f", "#507aa5"];
+  const statsQuery = useQuery({ queryKey: ["dashboard-stats"], queryFn: async () => (await api.get("/policies/dashboard-stats")).data?.data, enabled: !useFixtures });
+  const policyQuery = useApiList<typeof fixturePolicies[number]>("dashboard-policies", "/policies?size=6", fixturePolicies);
+  const stats = (statsQuery.data ?? {}) as Record<string, unknown>;
+  const stat = (key: string, fallback: string) => String(useFixtures ? fallback : (stats[key] ?? "—"));
   return (
     <>
       <PageHeader eyebrow="Sunday, 26 July" title="Good morning, Karthik." description="Here’s what needs your attention across the business today." action={<button className="button subtle"><CalendarClock size={17} /> July 2026 <ChevronDown size={15} /></button>} />
       <section className="attention-strip"><div className="attention-icon"><Bell /></div><div><strong>7 policies need attention this week</strong><span>₹2.84 lakh in premium is due for renewal</span></div><div className="stacked-avatars"><i>AM</i><i>MN</i><i>PR</i><i>+4</i></div><button>Review renewals <ChevronRight size={16} /></button></section>
       <div className="stats-grid">
-        <Stat icon={ShieldCheck} tone="green" label="Active policies" value="286" meta="↑ 12 this month" />
-        <Stat icon={CalendarClock} tone="amber" label="Expiring in 15 days" value="18" meta="₹6.2L premium at risk" />
-        <Stat icon={CircleDollarSign} tone="blue" label="July commission" value="₹1.86L" meta="↑ 14.2% vs June" />
-        <Stat icon={Users} tone="violet" label="Total customers" value="172" meta="8 joined this month" />
+        <Stat icon={ShieldCheck} tone="green" label="Active policies" value={stat("totalActive","286")} meta="Live from policy book" />
+        <Stat icon={CalendarClock} tone="amber" label="Expiring in 15 days" value={stat("expiringIn15Days","18")} meta="Review renewal risk" />
+        <Stat icon={CircleDollarSign} tone="blue" label="July commission" value={stat("totalCommissionThisMonth","₹1.86L")} meta="Current reporting period" />
+        <Stat icon={Users} tone="violet" label="Total customers" value={stat("newCustomersThisMonth","172")} meta="Live from customer book" />
       </div>
       <div className="content-grid">
         <section className="card span-2">
@@ -175,7 +210,7 @@ function Dashboard() {
         </section>
         <section className="card span-2">
           <CardHead title="Upcoming renewals" subtitle="Policies closest to expiry" action={<button className="text-button">View all <ChevronRight /></button>} />
-          <div className="table-scroll"><table><thead><tr><th>Customer</th><th>Policy</th><th>Provider</th><th>Expires</th><th>Time left</th><th /></tr></thead><tbody>{policies.slice(0,4).map((p)=><tr key={p.id}><td><div className="person"><span>{initials(p.customer)}</span><strong>{p.customer}</strong></div></td><td><strong>{p.plan}</strong><small>{p.number}</small></td><td><Company value={p.company}/></td><td>{date(p.expiry)}</td><td><Days days={p.days}/></td><td><button className="row-action"><MoreHorizontal /></button></td></tr>)}</tbody></table></div>
+          <div className="table-scroll"><table><thead><tr><th>Customer</th><th>Policy</th><th>Provider</th><th>Expires</th><th>Time left</th><th /></tr></thead><tbody>{policyQuery.rows.slice(0,4).map((p:any)=><tr key={p.id}><td><div className="person"><span>{initials(p.customerName ?? p.customer)}</span><strong>{p.customerName ?? p.customer}</strong></div></td><td><strong>{p.planName ?? p.plan}</strong><small>{p.policyNumber ?? p.number}</small></td><td><Company value={p.company}/></td><td>{date(p.endDate ?? p.expiry)}</td><td><Days days={p.daysUntilExpiry ?? p.days ?? 0}/></td><td><button className="row-action"><MoreHorizontal /></button></td></tr>)}</tbody></table></div>
         </section>
         <section className="card">
           <CardHead title="Today’s follow-ups" subtitle="4 conversations due" />
@@ -193,12 +228,13 @@ function Dashboard() {
 
 function Customers() {
   const [query, setQuery] = useState(""); const [drawer, setDrawer] = useState(false);
-  const filtered = customers.filter((c) => `${c.name} ${c.phone} ${c.email}`.toLowerCase().includes(query.toLowerCase()));
+  const customerQuery = useApiList<typeof fixtureCustomers[number]>("customers", "/customers?size=100", fixtureCustomers);
+  const filtered = customerQuery.rows.filter((c) => `${c.name} ${c.phone} ${c.email}`.toLowerCase().includes(query.toLowerCase()));
   return <>
     <PageHeader eyebrow="Relationships" title="Customers" description="A complete view of every customer and the protection they hold." action={<button className="button primary" onClick={() => setDrawer(true)}><Plus size={17}/> New customer</button>} />
     <section className="card table-card">
       <div className="table-toolbar"><div className="search-box"><Search/><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search by name, phone or email"/></div><div><button className="button subtle">All policy types <ChevronDown size={15}/></button><button className="icon-button"><Settings/></button></div></div>
-      <div className="table-scroll"><table><thead><tr><th>Customer</th><th>Contact</th><th>City</th><th>Active policies</th><th>Annual premium</th><th>Lead</th><th/></tr></thead><tbody>{filtered.map((c)=><tr key={c.id}><td><div className="person"><span>{initials(c.name)}</span><strong>{c.name}</strong></div></td><td><strong>{c.phone}</strong><small>{c.email}</small></td><td>{c.city}</td><td><b className="count-badge">{c.policies}</b></td><td><strong>{inr(c.premium)}</strong></td><td><span className={`lead ${c.lead.toLowerCase()}`}>{c.lead}</span></td><td><button className="row-action"><MoreHorizontal/></button></td></tr>)}</tbody></table></div>
+      <div className="table-scroll"><table><thead><tr><th>Customer</th><th>Contact</th><th>City</th><th>Active policies</th><th>Annual premium</th><th>Lead</th><th/></tr></thead><tbody>{filtered.map((c:any)=><tr key={c.id}><td><div className="person"><span>{initials(c.name)}</span><strong>{c.name}</strong></div></td><td><strong>{c.phone}</strong><small>{c.email}</small></td><td>{c.city}</td><td><b className="count-badge">{c.policies ?? c.policyCount ?? 0}</b></td><td><strong>{inr(Number(c.premium ?? c.totalAnnualPremium ?? 0))}</strong></td><td><span className={`lead ${(c.lead ?? "WARM").toLowerCase()}`}>{c.lead ?? "WARM"}</span></td><td><button className="row-action"><MoreHorizontal/></button></td></tr>)}</tbody></table></div>
       <div className="pagination"><span>Showing 1–{filtered.length} of 172 customers</span><div><button disabled>Previous</button><button className="selected">1</button><button>2</button><button>3</button><button>Next</button></div></div>
     </section>
     {drawer && <Drawer title="Add a new customer" subtitle="Start with their essential contact details." close={()=>setDrawer(false)}><CustomerForm close={()=>setDrawer(false)}/></Drawer>}

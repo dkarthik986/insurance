@@ -24,5 +24,15 @@ public class EmailService {
             + "\nPlan: " + policy.getPlanName() + "\n\nRegards,\nInsureDesk");
         mailSender.send(mail);
     }
-}
 
+    public void sendPasswordReset(String email, String resetUrl) {
+        if (sender.isBlank() || email == null || email.isBlank()) return;
+        var mail = new SimpleMailMessage();
+        mail.setFrom(sender);
+        mail.setTo(email);
+        mail.setSubject("Reset your InsureDesk password");
+        mail.setText("Use this secure link to reset your password (valid for 30 minutes):\n\n"
+            + resetUrl + "\n\nIf you did not request this, you can ignore this message.");
+        mailSender.send(mail);
+    }
+}

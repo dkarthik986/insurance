@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.time.Instant;
 
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
 @Entity @Table(name = "users")
@@ -26,6 +27,8 @@ public class User implements UserDetails {
     @Column(name = "created_at", updatable = false) @Builder.Default private LocalDateTime createdAt = LocalDateTime.now();
     @Column(name = "updated_at") @Builder.Default private LocalDateTime updatedAt = LocalDateTime.now();
     @Column(name = "is_deleted") @Builder.Default private boolean deleted = false;
+    @Column(name = "failed_login_count") @Builder.Default private int failedLoginCount = 0;
+    @Column(name = "locked_until") private Instant lockedUntil;
 
     @PreUpdate void touch() { updatedAt = LocalDateTime.now(); }
     @Override public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -38,4 +41,3 @@ public class User implements UserDetails {
     @Override public boolean isCredentialsNonExpired() { return true; }
     @Override public boolean isEnabled() { return active && !deleted; }
 }
-

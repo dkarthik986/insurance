@@ -2,8 +2,6 @@ package com.insurance.agent.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
-import org.springframework.security.authentication.*;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -21,14 +19,17 @@ public class SecurityConfig {
         return http.csrf(c -> c.disable()).cors(c -> c.configurationSource(cors()))
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
-                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh", "/actuator/health", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password", "/actuator/health", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/api/v1/portal/**").hasRole("CUSTOMER")
                 .requestMatchers("/api/v1/**").hasRole("DEALER")
                 .anyRequest().permitAll())
+            .headers(h -> h
+                .contentTypeOptions(org.springframework.security.config.Customizer.withDefaults())
+                .frameOptions(f -> f.deny())
+                .httpStrictTransportSecurity(s -> s.includeSubDomains(true).maxAgeInSeconds(31536000)))
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class).build();
     }
     @Bean PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
-    @Bean AuthenticationManager authenticationManager(AuthenticationConfiguration c) throws Exception { return c.getAuthenticationManager(); }
     @Bean CorsConfigurationSource cors() {
         var c = new CorsConfiguration();
         c.setAllowedOrigins(Arrays.stream(allowedOrigins.split(",")).map(String::trim).toList());

@@ -23,5 +23,3 @@ export const revenue = [
   { month:"Apr", premium:4.0, commission:.58 },{ month:"May", premium:5.1, commission:.76 },
   { month:"Jun", premium:4.8, commission:.71 },{ month:"Jul", premium:5.7, commission:.86 }
 ];
-export const companyLabel: Record<string,string> = { STAR_HEALTH:"Star Health",TATA_AIG_HEALTH:"Tata AIG Health",LIC:"LIC",TATA_AIG_VEHICLE:"Tata AIG Vehicle",IFFCO_TOKIO:"IFFCO Tokio" };
-export const inr=(n:number)=>new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(n);
