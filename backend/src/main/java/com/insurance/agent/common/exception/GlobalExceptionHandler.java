@@ -5,15 +5,20 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.*;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import lombok.extern.slf4j.Slf4j;
 import java.util.stream.Collectors;
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
     @ExceptionHandler(EntityNotFoundException.class)
     ResponseEntity<?> notFound(EntityNotFoundException e) { return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage())); }
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<?> forbidden() { return ResponseEntity.status(403).body(ApiResponse.error("You do not have permission for this action")); }
+    @ExceptionHandler(AuthenticationException.class)
+    ResponseEntity<?> unauthenticated() { return ResponseEntity.status(401).body(ApiResponse.error("Invalid email or password")); }
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<?> invalid(MethodArgumentNotValidException e) {
         String msg = e.getBindingResult().getFieldErrors().stream()
@@ -25,6 +30,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(JwtException.class)
     ResponseEntity<?> jwt() { return ResponseEntity.status(401).body(ApiResponse.error("Authentication token is invalid or expired")); }
     @ExceptionHandler(Exception.class)
-    ResponseEntity<?> unexpected(Exception e) { return ResponseEntity.internalServerError().body(ApiResponse.error("The request could not be completed")); }
+    ResponseEntity<?> unexpected(Exception e) {
+        log.error("Unhandled request failure", e);
+        return ResponseEntity.internalServerError().body(ApiResponse.error("The request could not be completed"));
+    }
 }
-

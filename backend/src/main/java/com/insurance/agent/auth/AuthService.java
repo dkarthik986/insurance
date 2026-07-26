@@ -37,6 +37,9 @@ public class AuthService {
     public IssuedAuth login(AuthRequest request, String userAgent, String ipAddress) {
         User user = users.findByEmailIgnoreCaseAndDeletedFalse(request.email())
             .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
+        if (!user.isEnabled()) {
+            throw new BadCredentialsException("Invalid email or password");
+        }
         if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(Instant.now())) {
             throw new BadCredentialsException("Invalid email or password");
         }

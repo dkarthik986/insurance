@@ -24,7 +24,7 @@ public class AuthController {
     @PostMapping("/login")
     ResponseEntity<?> login(@Valid @RequestBody AuthRequest request, HttpServletRequest http) {
         var issued = service.login(request, http.getHeader("User-Agent"), http.getRemoteAddr());
-        return ResponseEntity.ok(withCookie(ApiResponse.ok(issued.response()), issued.refreshToken()));
+        return withCookie(ApiResponse.ok(issued.response()), issued.refreshToken());
     }
 
     @PostMapping("/refresh")
@@ -32,19 +32,19 @@ public class AuthController {
                               @RequestBody(required = false) RefreshRequest localBody, HttpServletRequest http) {
         String token = cookie != null ? cookie : (localBody == null ? null : localBody.refreshToken());
         var issued = service.refresh(token, http.getHeader("User-Agent"), http.getRemoteAddr());
-        return ResponseEntity.ok(withCookie(ApiResponse.ok(issued.response()), issued.refreshToken()));
+        return withCookie(ApiResponse.ok(issued.response()), issued.refreshToken());
     }
 
     @PostMapping("/logout")
     ResponseEntity<?> logout(@CookieValue(value = "${app.auth.refresh-cookie-name:INSUREDESK_REFRESH}", required = false) String cookie) {
         service.logout(cookie);
-        return ResponseEntity.ok(clearCookie(ApiResponse.ok(null, "Logged out")));
+        return clearCookie(ApiResponse.ok(null, "Logged out"));
     }
 
     @PostMapping("/logout-all")
     ResponseEntity<?> logoutAll(@AuthenticationPrincipal User user) {
         service.logoutAll(user.getId());
-        return ResponseEntity.ok(clearCookie(ApiResponse.ok(null, "All sessions revoked")));
+        return clearCookie(ApiResponse.ok(null, "All sessions revoked"));
     }
 
     @GetMapping("/me")
@@ -55,7 +55,8 @@ public class AuthController {
     @PostMapping("/customer-login")
     ResponseEntity<?> customerLogin(@Valid @RequestBody CreateCustomerLoginRequest request, HttpServletRequest http) {
         var issued = service.createCustomerLogin(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(withCookie(ApiResponse.ok(issued.response()), issued.refreshToken()));
+        return cookie(ResponseEntity.status(HttpStatus.CREATED), issued.refreshToken(), refreshExpiryMs)
+            .body(ApiResponse.ok(issued.response()));
     }
 
     @PostMapping("/forgot-password")
@@ -82,4 +83,3 @@ public class AuthController {
         return cookie(ResponseEntity.ok(), "", 0).body(body);
     }
 }
-
