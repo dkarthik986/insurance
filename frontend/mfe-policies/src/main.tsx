@@ -1,0 +1,1 @@
+import React from"react";import{createRoot}from"react-dom/client";import PoliciesApp from"./PoliciesApp";createRoot(document.getElementById("root")!).render(<React.StrictMode><PoliciesApp/></React.StrictMode>);

@@ -1,0 +1,25 @@
+{
+  "name": "insuredesk-frontends",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "shell-app",
+    "mfe-dashboard",
+    "mfe-customers",
+    "mfe-policies",
+    "mfe-vehicles",
+    "mfe-notifications",
+    "mfe-reports",
+    "mfe-customer-portal"
+  ],
+  "scripts": {
+    "dev:shell": "npm run dev -w shell-app",
+    "dev:all": "concurrently -n shell,dashboard,customers,policies,vehicles,notifications,reports,portal -c auto \"npm run dev -w shell-app\" \"npm run dev -w mfe-dashboard\" \"npm run dev -w mfe-customers\" \"npm run dev -w mfe-policies\" \"npm run dev -w mfe-vehicles\" \"npm run dev -w mfe-notifications\" \"npm run dev -w mfe-reports\" \"npm run dev -w mfe-customer-portal\"",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
+

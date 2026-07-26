@@ -1,0 +1,1 @@
+import React from"react";import{createRoot}from"react-dom/client";import ReportsApp from"./ReportsApp";createRoot(document.getElementById("root")!).render(<React.StrictMode><ReportsApp/></React.StrictMode>);

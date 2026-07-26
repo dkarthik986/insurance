@@ -1,0 +1,1 @@
+import React from"react";import{createRoot}from"react-dom/client";import NotificationsApp from"./NotificationsApp";createRoot(document.getElementById("root")!).render(<React.StrictMode><NotificationsApp/></React.StrictMode>);
