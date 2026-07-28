@@ -8,5 +8,5 @@ RUN mvn -q -DskipTests package
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=build /workspace/target/insurance-agent-backend-1.0.0.jar app.jar
-EXPOSE 8082
+EXPOSE 8023
 ENTRYPOINT ["java","-jar","app.jar"]

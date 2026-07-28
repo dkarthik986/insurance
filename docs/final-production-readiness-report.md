@@ -5,7 +5,7 @@
 
 ## Implemented
 
-- Backend runs on a configurable port (default `8082`) and requires database/JWT secrets from environment variables.
+- Backend runs on a configurable port (default `8023`) and requires database/JWT secrets from environment variables.
 - Flyway migrations add refresh-session rotation/revocation, password-reset tokens, audit/document/notification tables, export jobs and notification settings.
 - Authentication now uses short-lived in-memory access tokens in the web client and an HttpOnly refresh cookie. Failed-login lockout, logout, logout-all, `/auth/me`, and password reset flows are present.
 - Frontend workspaces build independently and the shell supports runtime-configured Module Federation remotes.

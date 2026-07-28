@@ -6,7 +6,7 @@ Tata AIG Vehicle, and IFFCO Tokio.
 ## Structure
 
 - `frontend/` — React + TypeScript micro-frontends (ports 4000–4007)
-- `backend/` — Spring Boot 3 / Java 21 REST API (default port 8082)
+- `backend/` — Spring Boot 3 / Java 21 REST API (default port 8023)
 
 ## Local setup
 

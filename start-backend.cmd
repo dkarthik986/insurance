@@ -8,5 +8,5 @@ if not defined DB_PASS (
   echo Then run this file again.
   exit /b 1
 )
-echo Starting Insurance API at http://localhost:8082
+echo Starting Insurance API at http://localhost:8023
 call mvnw.cmd spring-boot:run
