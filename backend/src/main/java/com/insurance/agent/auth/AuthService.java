@@ -31,7 +31,7 @@ public class AuthService {
     @Value("${app.jwt.refresh-token-expiry-ms}") private long refreshExpiryMs;
     @Value("${app.auth.max-login-attempts:5}") private int maxLoginAttempts;
     @Value("${app.auth.lock-minutes:15}") private long lockMinutes;
-    @Value("${app.frontend.reset-url:http://localhost:3000/reset-password}") private String resetUrl;
+    @Value("${app.frontend.reset-url:http://localhost:4000/reset-password}") private String resetUrl;
 
     @Transactional
     public IssuedAuth login(AuthRequest request, String userAgent, String ipAddress) {

@@ -1,6 +1,6 @@
 import axios from "axios";
 import { getAccessToken, refreshAccessToken, setAccessToken } from "./auth";
-export const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api/v1", timeout: 10_000, withCredentials: true });
+export const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8082/api/v1", timeout: 10_000, withCredentials: true });
 api.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;

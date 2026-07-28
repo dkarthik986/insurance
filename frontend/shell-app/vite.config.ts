@@ -23,9 +23,8 @@ export default defineConfig(({ mode }) => {
       })
     ],
     envDir: "..",
-    server: { port: Number(env.VITE_SHELL_PORT || 3000), host: "0.0.0.0" },
-    preview: { port: Number(env.VITE_SHELL_PORT || 3000) },
+    server: { port: Number(env.VITE_SHELL_PORT || 4000), host: "0.0.0.0" },
+    preview: { port: Number(env.VITE_SHELL_PORT || 4000) },
     build: { target: "esnext" }
   };
 });
-

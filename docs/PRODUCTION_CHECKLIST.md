@@ -19,7 +19,7 @@ Configure these in Render or the backend process environment:
 
 - `DB_URL`, `DB_USER`, `DB_PASS`
 - `JWT_SECRET` (32+ random characters)
-- `CORS_ALLOWED_ORIGINS`
+- `APP_ALLOWED_ORIGINS`
 - `GMAIL_USER`, `GMAIL_APP_PASS`
 - `WA_TOKEN`, `WA_PHONE_ID`
 - `CLOUD_NAME`, `CLOUD_KEY`, `CLOUD_SECRET`
@@ -44,4 +44,3 @@ The backend CORS value must include the deployed shell and remote origins.
 - LIC policies create premium schedule rows
 - Excel and PDF exports download successfully
 - Vercel shell loads all seven remote entries
-
